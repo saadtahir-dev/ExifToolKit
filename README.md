@@ -31,6 +31,15 @@ Then add to your target:
 )
 ```
 
+### Via Xcode
+
+1. Open your project in Xcode
+2. Go to **File → Add Package Dependencies...**
+3. Enter the URL: `https://github.com/saadtahir-dev/ExifToolKit.git`
+4. Set the version rule to **Up to Next Major** from `1.0.0`
+5. Click **Add Package**
+6. Select **ExifToolKit** and click **Add to Target**
+
 ---
 
 ## Backends
