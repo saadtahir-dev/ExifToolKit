@@ -20,20 +20,29 @@ public actor ExifTool {
         public var maxConcurrency: Int
         public var backend: Backend
         
+        /// Custom Application Support URL to install exiftool into.
+        /// SPM will copy the bundled exiftool script and lib into this folder.
+        /// Defaults to ~/Library/Application Support/ExifToolKit/
+        /// Example: pass your app's own Application Support folder
+        public var applicationSupportURL: URL?
+        
         public init(
             executablePath: String? = nil,
             extraArguments: [String] = [],
             numericOutput: Bool = false,
             chunkSize: Int = 1000,
             maxConcurrency: Int = 4,
-            backend: Backend = .auto
+            backend: Backend = .auto,
+            resourcesPath: String? = nil,
+            applicationSupportURL: URL? = nil
         ) {
-            self.executablePath = executablePath
-            self.extraArguments = extraArguments
-            self.numericOutput  = numericOutput
-            self.chunkSize      = chunkSize
-            self.maxConcurrency = maxConcurrency
-            self.backend        = backend
+            self.executablePath       = executablePath
+            self.extraArguments       = extraArguments
+            self.numericOutput        = numericOutput
+            self.chunkSize            = chunkSize
+            self.maxConcurrency       = maxConcurrency
+            self.backend              = backend
+            self.applicationSupportURL = applicationSupportURL
         }
     }
     

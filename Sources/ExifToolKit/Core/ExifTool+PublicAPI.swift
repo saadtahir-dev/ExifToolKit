@@ -19,12 +19,12 @@ extension ExifTool {
             
         case .exiftoolBinary:
             return try await runBinaryMetadata(for: [fileURL]).first
-            ?? { throw ExifToolError.fileNotFound(fileURL.path) }()
-            
+                ?? { throw ExifToolError.fileNotFound(fileURL.path) }()
+
         case .auto:
             if isExiftoolInstalled() {
                 return try await runBinaryMetadata(for: [fileURL]).first
-                ?? { throw ExifToolError.fileNotFound(fileURL.path) }()
+                    ?? { throw ExifToolError.fileNotFound(fileURL.path) }()
             } else {
                 return try await NativeExtractor().extract(from: fileURL)
             }
@@ -61,14 +61,15 @@ extension ExifTool {
         guard FileManager.default.fileExists(atPath: fileURL.path) else {
             throw ExifToolError.fileNotFound(fileURL.path)
         }
-        
-        var args = ["-S"]
+
+        var args = buildPerlArgs(script: execPath.script)
+        args += ["-S"]
         if config.numericOutput { args.append("-n") }
         args += tags.map { "-\($0.rawValue)" }
         args += config.extraArguments
         args.append(fileURL.path)
-        
-        let (stdout, _, exitCode) = try await runProcess(execPath, arguments: args)
+
+        let (stdout, _, exitCode) = try await runProcess(execPath.perl, arguments: args)
         guard exitCode == 0 || exitCode == 1
         else { throw ExifToolError.processFailure(exitCode: exitCode, stderr: "") }
         

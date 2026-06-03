@@ -9,7 +9,11 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "ExifToolKit"
+            name: "ExifToolKit",
+            resources: [
+                .copy("Resources/exiftool"),
+                .copy("Resources/lib")
+            ]
         ),
         .testTarget(
             name: "ExifToolKitTests",

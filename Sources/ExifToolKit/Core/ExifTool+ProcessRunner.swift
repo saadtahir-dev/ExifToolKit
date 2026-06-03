@@ -10,13 +10,14 @@
 import Foundation
 
 extension ExifTool {
-    func runBatch(execPath: String, urls: [URL]) async throws -> [ExifMetadata] {
-        var args = ["-S", "-sep", "\n"]
+    func runBatch(execPath: (perl: String, script: String), urls: [URL]) async throws -> [ExifMetadata] {
+        var args = buildPerlArgs(script: execPath.script)
+        args += ["-S", "-sep", "\n"]
         if config.numericOutput { args.append("-n") }
         args += config.extraArguments
         args += urls.map(\.path)
 
-        let (stdout, stderr, exitCode) = try await runProcess(execPath, arguments: args)
+        let (stdout, stderr, exitCode) = try await runProcess(execPath.perl, arguments: args)
 
         guard exitCode == 0 || exitCode == 1
         else { throw ExifToolError.processFailure(exitCode: exitCode, stderr: stderr) }
@@ -38,7 +39,7 @@ extension ExifTool {
                     let stdoutPipe = Pipe()
                     let stderrPipe = Pipe()
                     process.standardOutput = stdoutPipe
-                    process.standardError  = stderrPipe
+                    process.standardError = stderrPipe
 
                     try process.run()
                     process.waitUntilExit()
@@ -53,10 +54,26 @@ extension ExifTool {
                     ) ?? ""
 
                     continuation.resume(returning: (stdout, stderr, process.terminationStatus))
+                    
                 } catch {
                     continuation.resume(throwing: error)
                 }
             }
         }
+    }
+
+    // MARK: - Build Perl arguments
+    /// Passes -I flag so Perl finds the bundled lib/perl5 modules
+    func buildPerlArgs(script: String) -> [String] {
+        var args: [String] = []
+        
+        // Use lib from the same destination folder as the script
+        let perl5Path = libDestination().appendingPathComponent("perl5").path
+        if FileManager.default.fileExists(atPath: perl5Path) {
+            args += ["-I", perl5Path]
+        }
+        
+        args.append(script)
+        return args
     }
 }

@@ -239,4 +239,22 @@ struct ExifToolKitTests {
             print("  \(k): \(v)")
         }
     }
+
+    // MARK: - Bundled ExifTool Script
+
+    @Test("Bundled exiftool script extracts HEIC via Perl")
+    func bundledExiftoolScript() async throws {
+        guard FileManager.default.fileExists(atPath: heicURL.path) else { return }
+        let tool = ExifTool(configuration: .init(backend: .exiftoolBinary))
+        guard await tool.isExiftoolInstalled() else { return }
+        let meta = try await tool.metadata(for: heicURL)
+        print("\n=== Bundled ExifTool Script - HEIC ===")
+        for (k, v) in meta.raw.sorted(by: { $0.key < $1.key }) {
+            print("  \(k): \(v)")
+        }
+        #expect(meta.make == "Apple")
+        #expect(meta.model == "iPhone 11")
+        #expect(meta.iso == 200)
+        #expect(meta.gpsCoordinate != nil)
+    }
 }
