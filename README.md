@@ -1,6 +1,6 @@
 # ExifToolKit
 
-A Swift package for extracting EXIF metadata from images, videos, and documents on macOS. Supports native Apple APIs (ImageIO, AVFoundation, CoreGraphics) and system-installed ExifTool — no bundled binaries, fully notarizable, App Store compatible.
+A Swift package for extracting EXIF metadata from images, videos, and documents on macOS. Supports native Apple APIs (ImageIO, AVFoundation, CoreGraphics) and a bundled ExifTool Perl script — fully notarizable, App Store compatible for the native backend.
 
 ---
 
@@ -18,7 +18,7 @@ Add to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/saadtahir-dev/ExifToolKit.git", from: "1.0.0")
+    .package(url: "https://github.com/saadtahir-dev/ExifToolKit.git", from: "1.0.1")
 ]
 ```
 
@@ -36,7 +36,7 @@ Then add to your target:
 1. Open your project in Xcode
 2. Go to **File → Add Package Dependencies...**
 3. Enter the URL: `https://github.com/saadtahir-dev/ExifToolKit.git`
-4. Set the version rule to **Up to Next Major** from `1.0.0`
+4. Set the version rule to **Up to Next Major** from `1.0.1`
 5. Click **Add Package**
 6. Select **ExifToolKit** and click **Add to Target**
 
@@ -47,13 +47,15 @@ Then add to your target:
 ExifToolKit supports three backends, configured at init time.
 
 ### `.auto` (default)
-Checks if ExifTool is installed on the system. If found, uses it for maximum tag coverage. If not, falls back to native Apple APIs automatically — no configuration required.
+
+Checks if ExifTool is available (bundled or system). If found, uses it for maximum tag coverage. If not, falls back to native Apple APIs automatically — no configuration required.
 
 ```swift
 let tool = ExifTool() // backend: .auto
 ```
 
 ### `.native`
+
 Uses Apple system frameworks exclusively — ImageIO for images, AVFoundation for audio/video, CoreGraphics for PDFs. Fully notarizable, App Store compatible, no external dependencies.
 
 ```swift
@@ -67,10 +69,56 @@ let tool = ExifTool(configuration: .init(backend: .native))
 | CoreGraphics | PDF |
 
 ### `.exiftoolBinary`
-Uses system-installed ExifTool (`brew install exiftool`) for maximum tag coverage including MakerNote fields, computed tags, and 20,000+ supported tags. Throws if ExifTool is not installed.
+
+Uses the bundled ExifTool Perl script (included in the SPM package) for maximum tag coverage including MakerNote fields, computed tags, and 20,000+ supported tags. Invoked via macOS system Perl (`/usr/bin/perl`) — no installation required.
 
 ```swift
 let tool = ExifTool(configuration: .init(backend: .exiftoolBinary))
+```
+
+---
+
+## How ExifTool Is Bundled
+
+ExifToolKit bundles the official ExifTool Perl script and its Perl modules as SPM resources:
+
+```
+Resources/
+├── exiftool        ← official ExifTool Perl script by Phil Harvey
+└── lib/
+    └── perl5/
+        └── Image/
+            └── ExifTool/
+                └── *.pm
+```
+
+At runtime, ExifToolKit copies the script to a writable location (Application Support) and invokes it via macOS system Perl:
+
+```bash
+/usr/bin/perl -I /path/to/lib/perl5 /path/to/exiftool -S image.heic
+```
+
+macOS always ships with `/usr/bin/perl` — no Homebrew, no installation needed.
+
+### Custom Application Support folder
+
+By default, ExifToolKit installs to `~/Library/Application Support/ExifToolKit/`. You can override this to use your app's own folder:
+
+```swift
+let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+
+let config = ExifTool.Configuration(
+    applicationSupportURL: appSupport.appendingPathComponent("YourApp/ExifTool")
+)
+let tool = ExifTool(configuration: config)
+```
+
+For app bundles (e.g. RECON LAB):
+
+```swift
+let config = ExifTool.Configuration(
+    applicationSupportURL: appSupport.appendingPathComponent("RECON LAB/ExifTool")
+)
 ```
 
 ---
@@ -97,8 +145,8 @@ print(meta.gpsCoordinate)    // (31.455333, 74.276108)
 print(meta.imageSize)        // (4032, 3024)
 
 // Raw access for any tag
-print(meta["LensModel"])     // "iPhone 11 back dual wide camera 4.25mm f/1.8"
-print(meta["ContentIdentifier"]) // "D59008BC-DAC7-46D7-A576-8B510CE8D761"
+print(meta["LensModel"])          // "iPhone 11 back dual wide camera 4.25mm f/1.8"
+print(meta["ContentIdentifier"])  // "D59008BC-DAC7-46D7-A576-8B510CE8D761"
 ```
 
 ### Specific tags (ExifTool binary only)
@@ -135,11 +183,12 @@ for await result in await tool.metadataStream(for: urls) {
 
 ```swift
 let config = ExifTool.Configuration(
-    backend: .auto,           // .native / .exiftoolBinary / .auto
-    chunkSize: 1000,          // files per batch invocation
-    maxConcurrency: 4,        // parallel workers
-    numericOutput: false,     // pass -n to exiftool for raw numeric values
-    executablePath: nil       // custom exiftool path, e.g. "/usr/local/bin/exiftool"
+    backend: .auto,                // .native / .exiftoolBinary / .auto
+    chunkSize: 1000,               // files per batch invocation
+    maxConcurrency: 4,             // parallel workers
+    numericOutput: false,          // pass -n to exiftool for raw numeric values
+    executablePath: nil,           // custom exiftool path, e.g. "/usr/local/bin/exiftool"
+    applicationSupportURL: nil     // custom install location for exiftool script
 )
 let tool = ExifTool(configuration: config)
 ```
@@ -149,7 +198,7 @@ let tool = ExifTool(configuration: config)
 ```swift
 let tool = ExifTool()
 print(tool.isAvailable())          // always true (native is always present)
-print(tool.isExiftoolInstalled())  // true if brew install exiftool was run
+print(tool.isExiftoolInstalled())  // true if bundled or system exiftool is found
 ```
 
 ### Direct native extraction
@@ -206,7 +255,8 @@ meta["LivePhotoVitalityScore"]
 |---|---|---|
 | Notarizable | ✅ | ✅ |
 | App Store compatible | ✅ | ❌ |
-| External dependency | None | `brew install exiftool` |
+| External dependency | None | None (bundled) |
+| Requires installation | None | None |
 | Standard EXIF/GPS | ✅ | ✅ |
 | Apple MakerNote | Partial | ✅ Full |
 | Computed tags | ❌ | ✅ |
@@ -215,6 +265,12 @@ meta["LivePhotoVitalityScore"]
 | Video | ✅ | ✅ |
 | PDF | ✅ | ✅ |
 | Audio | ✅ | ✅ |
+
+---
+
+## ExifTool Attribution
+
+ExifToolKit bundles ExifTool, created by Phil Harvey. ExifTool is copyright Phil Harvey and contributors, distributed under the same terms as Perl itself (Perl Artistic License or GNU General Public License). ExifTool and Phil Harvey are not affiliated with or endorsing ExifToolKit.
 
 ---
 
