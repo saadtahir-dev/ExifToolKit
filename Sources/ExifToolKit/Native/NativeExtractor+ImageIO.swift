@@ -99,6 +99,11 @@ extension NativeExtractor {
             pairs["ResolutionUnit"] = (tiff[kCGImagePropertyTIFFResolutionUnit as String] as? Int).map { $0 == 2 ? "inches" : "cm" }
             pairs["XResolution"]  = (tiff[kCGImagePropertyTIFFXResolution as String] as? Double).map { "\(Int($0))" }
             pairs["YResolution"]  = (tiff[kCGImagePropertyTIFFYResolution as String] as? Double).map { "\(Int($0))" }
+            // Artist maps to Author for consistency with exiftool output
+            if let artist = tiff[kCGImagePropertyTIFFArtist as String] as? String, !artist.isEmpty {
+                pairs["Author"] = artist
+                pairs["Artist"] = artist
+            }
         }
         
         // GPS

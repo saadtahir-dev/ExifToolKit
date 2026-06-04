@@ -16,14 +16,14 @@ extension ExifTool {
         "/usr/bin/perl",
         "/usr/bin/perl5.34",
         "/usr/local/bin/perl",
-        "/opt/homebrew/bin/perl",
+        "/opt/homebrew/bin/perl"
     ]
     
     /// System exiftool script paths (fallback if not bundled)
     static let systemExiftoolPaths = [
         "/opt/homebrew/bin/exiftool",
         "/usr/local/bin/exiftool",
-        "/usr/bin/exiftool",
+        "/usr/bin/exiftool"
     ]
     
     // MARK: - Destination (uses custom appSupportURL or default)
