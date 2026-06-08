@@ -109,3 +109,32 @@ extension NativeExtractor {
         "M": "Magnetic North"
     ]
 }
+
+// MARK: - MIME Type
+public extension NativeExtractor {
+    static let mimeTypeFallbackMap: [String: String] = [
+        // Image formats not covered by UTType
+        "cur":  "image/vnd.microsoft.icon",
+        "jpm":  "image/jpm",
+        "x3f":  "image/x-sigma-x3f",
+        
+        // Audio/Video formats not covered by UTType
+        "m2ts": "video/mp2t",
+        "m4b":  "audio/mp4",
+        "mkv":  "video/x-matroska",
+        "mts":  "video/mp2t",
+        "ts":   "video/mp2t",
+        
+        // Common app/system formats
+        "plist":   "application/x-plist",
+        "bplist":  "application/x-plist",
+        "db":      "application/x-sqlite3",
+        "sqlite":  "application/x-sqlite3",
+        "sqlite3": "application/x-sqlite3",
+        "ipa":     "application/octet-stream",
+        "dylib":   "application/octet-stream",
+        "strings": "text/plain",
+        "nib":     "application/octet-stream",
+        "car":     "application/octet-stream",
+    ]
+}

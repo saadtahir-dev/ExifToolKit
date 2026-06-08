@@ -81,24 +81,31 @@ public struct NativeExtractor {
     }
 
     // MARK: - File Attributes fallback
-
     func fileAttributes(for url: URL) -> [String: String] {
         var pairs: [String: String] = [:]
-        pairs["FileName"] = url.lastPathComponent
-        pairs["FileType"] = url.pathExtension.uppercased()
-
+        pairs["File Name"] = url.lastPathComponent
+        pairs["File Type"] = url.pathExtension.uppercased()
+        
         if let attrs = try? FileManager.default.attributesOfItem(atPath: url.path) {
             if let size = attrs[.size] as? Int {
-                pairs["FileSize"] = "\(size) bytes"
+                pairs["File Size"] = "\(size) bytes"
             }
             if let modified = attrs[.modificationDate] as? Date {
-                pairs["FileModifyDate"] = ISO8601DateFormatter().string(from: modified)
+                pairs["File Modification Date/Time"] = ISO8601DateFormatter().string(from: modified)
             }
             if let created = attrs[.creationDate] as? Date {
-                pairs["FileCreateDate"] = ISO8601DateFormatter().string(from: created)
+                pairs["File Create Date"] = ISO8601DateFormatter().string(from: created)
             }
         }
-
+        
+        // MIME Type via UTType
+        let ext = url.pathExtension.lowercased()
+        if let mime = UTType(filenameExtension: ext)?.preferredMIMEType {
+            pairs["MIME Type"] = mime
+        } else if let mime = NativeExtractor.mimeTypeFallbackMap[ext] {
+            pairs["MIME Type"] = mime
+        }
+        
         return pairs
     }
 }
