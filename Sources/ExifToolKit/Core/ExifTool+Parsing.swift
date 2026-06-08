@@ -15,7 +15,8 @@ extension ExifTool {
             return [ExifMetadata(fileURL: fileURLs[0], raw: parsePairs(from: output))]
         }
 
-        var results:      [ExifMetadata]  = []
+        // Multiple files: separated by blank lines, SourceFile line identifies each file
+        var results:      [ExifMetadata]   = []
         var currentPairs: [String: String] = [:]
         var currentURL:   URL?
 
@@ -31,10 +32,7 @@ extension ExifTool {
                 continue
             }
 
-            guard let colonIdx = trimmed.firstIndex(of: ":") else { continue }
-
-            let key   = String(trimmed[..<colonIdx]).trimmingCharacters(in: .whitespaces)
-            let value = String(trimmed[trimmed.index(after: colonIdx)...]).trimmingCharacters(in: .whitespaces)
+            guard let (key, value) = parseLine(trimmed) else { continue }
 
             if key == "SourceFile" {
                 currentURL = URL(fileURLWithPath: value)
@@ -52,20 +50,28 @@ extension ExifTool {
 
     func parsePairs(from output: String) -> [String: String] {
         var pairs: [String: String] = [:]
-
         for line in output.components(separatedBy: "\n") {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
-
-            guard !trimmed.isEmpty,
-                  let colonIdx = trimmed.firstIndex(of: ":")
-            else { continue }
-
-            let key   = String(trimmed[..<colonIdx]).trimmingCharacters(in: .whitespaces)
-            let value = String(trimmed[trimmed.index(after: colonIdx)...]).trimmingCharacters(in: .whitespaces)
-
-            pairs[key] = value
+            guard !trimmed.isEmpty else { continue }
+            if let (key, value) = parseLine(trimmed) {
+                pairs[key] = value
+            }
         }
-
         return pairs
+    }
+
+    /// Parses both formats:
+    /// - Default: "File Name                       : IMG_0003.HEIC"
+    /// - Short (-S): "FileName: IMG_0003.HEIC"
+    private func parseLine(_ line: String) -> (key: String, value: String)? {
+        guard let colonIdx = line.firstIndex(of: ":") else { return nil }
+
+        let rawKey = String(line[..<colonIdx]).trimmingCharacters(in: .whitespaces)
+        let value  = String(line[line.index(after: colonIdx)...]).trimmingCharacters(in: .whitespaces)
+
+        guard !rawKey.isEmpty else { return nil }
+
+        // Normalize: "File Name" → "File Name" (keep spaces, this IS the human-readable key)
+        return (rawKey, value)
     }
 }

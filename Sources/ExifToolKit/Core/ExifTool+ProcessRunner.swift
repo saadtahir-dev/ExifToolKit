@@ -12,7 +12,6 @@ import Foundation
 extension ExifTool {
     func runBatch(execPath: (perl: String, script: String), urls: [URL]) async throws -> [ExifMetadata] {
         var args = buildPerlArgs(script: execPath.script)
-        args += ["-S", "-sep", "\n"]
         if config.numericOutput { args.append("-n") }
         args += config.extraArguments
         args += urls.map(\.path)
