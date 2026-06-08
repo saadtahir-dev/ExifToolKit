@@ -19,13 +19,38 @@ public struct NativeExtractor {
         "gif", "webp", "raw", "cr2", "cr3", "nef", "arw", "dng",
         "orf", "rw2", "pef", "srw", "raf", "3fr", "fff", "iiq",
         "erf", "mrw", "nrw", "rwl", "sr2", "x3f", "ico", "cur",
-        "psd", "svg", "jp2", "j2k", "jpf", "jpx", "jpm", "avif"
+        "psd", "svg", "jp2", "j2k", "jpf", "jpx", "jpm", "avif",
+        "pcx"
     ]
 
-    private static let audioVideoExtensions: Set<String> = [
-        "mov", "mp4", "m4v", "avi", "mkv", "wmv", "flv", "webm",
+    private static let audioVideoExtensions = [
+        "mov", "qt", "mp4", "m4v", "avi", "mkv", "wmv", "flv", "webm",
         "m4a", "mp3", "aac", "wav", "flac", "ogg", "wma", "aiff",
         "aif", "opus", "m4b", "3gp", "3g2", "mts", "m2ts", "ts"
+    ]
+    
+    private static let applicationExtensions: Set<String> = [
+        // Binary/Generic
+        "bin", "dmg", "dylib", "so", "dat", "exe", "iso",
+        // SQLite
+        "sqlite", "sqlite3", "db",
+        // Apple System Profiler
+        "spx", "spxi",
+        // Compressed
+        "gz", "gzip", "tgz",
+        // XML/XSLT
+        "xsl", "xslt",
+        // iOS/macOS app formats
+        "ipa", "app", "pkg", "deb",
+        // Other
+        "plist", "bplist", "car", "nib", "strings", "mobileprovision"
+    ]
+
+    private static let textExtensions: Set<String> = [
+        "txt", "log", "csv", "conf", "ini", "md",
+        "xml", "json", "yaml", "yml", "html", "htm",
+        "css", "js", "swift", "py", "rb", "sh", "bash",
+        "c", "cpp", "h", "m", "java", "kt", "ts"
     ]
 
     public init() {}
@@ -46,6 +71,7 @@ public struct NativeExtractor {
         } else if isPDF(uti, ext: ext) {
             return try extractPDF(from: url)
         } else {
+            // For all other types — return file attributes + MIME Type
             return ExifMetadata(fileURL: url, raw: fileAttributes(for: url))
         }
     }

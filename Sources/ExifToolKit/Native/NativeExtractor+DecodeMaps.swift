@@ -114,9 +114,10 @@ extension NativeExtractor {
 public extension NativeExtractor {
     static let mimeTypeFallbackMap: [String: String] = [
         // Image formats not covered by UTType
-        "cur":  "image/vnd.microsoft.icon",
-        "jpm":  "image/jpm",
-        "x3f":  "image/x-sigma-x3f",
+        "cur": "image/vnd.microsoft.icon",
+        "jpm": "image/jpm",
+        "x3f": "image/x-sigma-x3f",
+        "pcx": "image/x-pcx",
         
         // Audio/Video formats not covered by UTType
         "m2ts": "video/mp2t",
@@ -125,16 +126,40 @@ public extension NativeExtractor {
         "mts":  "video/mp2t",
         "ts":   "video/mp2t",
         
-        // Common app/system formats
-        "plist":   "application/x-plist",
+        // Application formats not covered by UTType
+        "app":     "application/octet-stream",
         "bplist":  "application/x-plist",
-        "db":      "application/x-sqlite3",
-        "sqlite":  "application/x-sqlite3",
-        "sqlite3": "application/x-sqlite3",
-        "ipa":     "application/octet-stream",
-        "dylib":   "application/octet-stream",
-        "strings": "text/plain",
-        "nib":     "application/octet-stream",
         "car":     "application/octet-stream",
+        "dat":     "application/octet-stream",
+        "db":      "application/vnd.sqlite3",
+        "dylib":   "application/octet-stream",
+        "ipa":     "application/octet-stream",
+        "iso":     "application/x-iso9660-image",
+        "nib":     "application/octet-stream",
+        "pkg":     "application/octet-stream",
+        "plist":   "application/x-plist",
+        "so":      "application/octet-stream",
+        "spx":     "application/x-apple-systemprofiler+xml",
+        "spxi":    "application/x-apple-systemprofiler+xml",
+        "sqlite":  "application/vnd.sqlite3",
+        "sqlite3": "application/vnd.sqlite3",
+        "strings": "text/plain",
+        "tgz":     "application/x-gzip",
+        "xsl":     "application/xslt+xml",
+        "xslt":    "application/xslt+xml",
+        
+        // Text/Code formats not covered by UTType
+        "bash":  "text/x-sh",
+        "c":     "text/x-c",
+        "conf":  "text/plain",
+        "cpp":   "text/x-c++",
+        "h":     "text/x-c",
+        "ini":   "text/plain",
+        "java":  "text/x-java-source",
+        "kt":    "text/x-kotlin",
+        "log":   "text/plain",
+        "m":     "text/x-objcsrc",
+        "sh":    "text/x-sh",
+        "swift": "text/x-swift",
     ]
 }
