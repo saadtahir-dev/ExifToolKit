@@ -17,7 +17,10 @@ let package = Package(
         ),
         .testTarget(
             name: "ExifToolKitTests",
-            dependencies: ["ExifToolKit"]
-        ),
+            dependencies: ["ExifToolKit"],
+            resources: [
+                .copy("Resources")
+            ]
+        )
     ]
 )

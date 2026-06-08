@@ -255,13 +255,8 @@ struct ExifToolKitTests {
 extension ExifToolKitTests {
     @Test("Compare PDF metadata - Native vs ExifTool")
     func comparePDFNativeVsExifTool() async throws {
-        let pdfURL = URL(fileURLWithPath: "/Users/saadtahir/Desktop/Sample.pdf")
-        
-        guard FileManager.default.fileExists(atPath: pdfURL.path) else {
-            Issue.record("PDF not found at \(pdfURL.path)")
-            return
-        }
-        
+        let pdfURL = Bundle.module.url(forResource: "Sample", withExtension: "pdf", subdirectory: "Resources")!
+    
         // Native
         let nativeMeta = try await NativeExtractor().extract(from: pdfURL)
         
@@ -333,15 +328,10 @@ extension ExifToolKitTests {
     
     @Test("Compare Image metadata - Native vs ExifTool")
     func compareIMAGENativeVsExifTool() async throws {
-        let pdfURL = URL(fileURLWithPath: "/Users/saadtahir/Documents/_LAB_Output/xf _2026-06-04T18-25-02/Indexed Sources/00008030-000A6D400EDA802E/Extracted Backup/CameraRollDomain/Media/DCIM/100APPLE/IMG_0003.HEIC")
-        
-        guard FileManager.default.fileExists(atPath: pdfURL.path) else {
-            Issue.record("Image not found at \(pdfURL.path)")
-            return
-        }
+        let imageURL = Bundle.module.url(forResource: "Sample", withExtension: "HEIC", subdirectory: "Resources")!
         
         // Native
-        let nativeMeta = try await NativeExtractor().extract(from: pdfURL)
+        let nativeMeta = try await NativeExtractor().extract(from: imageURL)
         
         print("\n==================================================")
         print("NATIVE Image METADATA (\(nativeMeta.raw.count) tags)")
@@ -358,7 +348,7 @@ extension ExifToolKitTests {
             )
         )
         
-        let binaryMeta = try await exifTool.metadata(for: pdfURL)
+        let binaryMeta = try await exifTool.metadata(for: imageURL)
         
         print("\n==================================================")
         print("EXIFTOOL Image METADATA (\(binaryMeta.raw.count) tags)")
@@ -411,15 +401,10 @@ extension ExifToolKitTests {
     
     @Test("Compare AV metadata - Native vs ExifTool")
     func compareAVNativeVsExifTool() async throws {
-        let pdfURL = URL(fileURLWithPath: "/Users/saadtahir/Documents/_LAB_Output/sd_2026-06-08T11-36-42/Indexed Sources/00008030-000A6D400EDA802E/Extracted Backup/CameraRollDomain/Media/DCIM/100APPLE/IMG_0001.MOV")
-        
-        guard FileManager.default.fileExists(atPath: pdfURL.path) else {
-            Issue.record("AV not found at \(pdfURL.path)")
-            return
-        }
+        let avURL = Bundle.module.url(forResource: "Sample", withExtension: "MOV", subdirectory: "Resources")!
         
         // Native
-        let nativeMeta = try await NativeExtractor().extract(from: pdfURL)
+        let nativeMeta = try await NativeExtractor().extract(from: avURL)
         
         print("\n==================================================")
         print("NATIVE AV METADATA (\(nativeMeta.raw.count) tags)")
@@ -436,7 +421,7 @@ extension ExifToolKitTests {
             )
         )
         
-        let binaryMeta = try await exifTool.metadata(for: pdfURL)
+        let binaryMeta = try await exifTool.metadata(for: avURL)
         
         print("\n==================================================")
         print("EXIFTOOL AV METADATA (\(binaryMeta.raw.count) tags)")
