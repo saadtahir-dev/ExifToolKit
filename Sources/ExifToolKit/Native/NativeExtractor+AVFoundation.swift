@@ -15,79 +15,73 @@ extension NativeExtractor {
     func extractAudioVideo(from url: URL) async throws -> ExifMetadata {
         let asset = AVAsset(url: url)
         var pairs: [String: String] = [:]
-        
+
         // File info
-        pairs["FileName"] = url.lastPathComponent
-        pairs["FileType"] = url.pathExtension.uppercased()
+        pairs["File Name"] = url.lastPathComponent
+        pairs["File Type"] = url.pathExtension.uppercased()
         if let attrs = try? FileManager.default.attributesOfItem(atPath: url.path),
            let size = attrs[.size] as? Int {
-            pairs["FileSize"] = "\(size) bytes"
+            pairs["File Size"] = "\(size) bytes"
         }
-        
+        if let uti = UTType(filenameExtension: url.pathExtension.lowercased()),
+           let mime = uti.preferredMIMEType {
+            pairs["MIME Type"] = mime
+        }
+
         // Duration
         if let duration = try? await asset.load(.duration),
            duration.isValid && !duration.isIndefinite {
             pairs["Duration"] = String(format: "%.2f s", CMTimeGetSeconds(duration))
         }
-        
+
         // Tracks
         if let tracks = try? await asset.load(.tracks) {
             for track in tracks {
                 switch track.mediaType {
                 case .video:
-                    // Use formatDescriptions to get encoded pixel dimensions
-                    // naturalSize returns clean aperture; we want production aperture
                     if let descs = try? await track.load(.formatDescriptions),
                        let first = descs.first {
                         let dimensions = CMVideoFormatDescriptionGetDimensions(first)
                         if dimensions.width > 0 && dimensions.height > 0 {
-                            pairs["ImageWidth"]  = "\(dimensions.width)"
-                            pairs["ImageHeight"] = "\(dimensions.height)"
+                            pairs["Image Width"]  = "\(dimensions.width)"
+                            pairs["Image Height"] = "\(dimensions.height)"
                         }
-                        
-                    } else if let size = try? await track.load(.naturalSize) {
-                        pairs["ImageWidth"]  = "\(Int(size.width))"
-                        pairs["ImageHeight"] = "\(Int(size.height))"
-                    }
-                    
-                    if let fps = try? await track.load(.nominalFrameRate) {
-                        pairs["VideoFrameRate"] = String(format: "%.3f", fps)
-                    }
-                    
-                    if let rate = try? await track.load(.estimatedDataRate), rate > 0 {
-                        pairs["AvgBitrate"] = String(format: "%.1f Mbps", rate / 1_000_000)
-                    }
-                    
-                    if let descs = try? await track.load(.formatDescriptions),
-                       let first = descs.first {
                         let sub = CMFormatDescriptionGetMediaSubType(first)
                         let codec = String(format: "%c%c%c%c",
-                                           (sub >> 24) & 0xFF, (sub >> 16) & 0xFF,
-                                           (sub >> 8)  & 0xFF,  sub & 0xFF)
-                        pairs["CompressorID"] = codec.trimmingCharacters(in: .whitespaces)
+                            (sub >> 24) & 0xFF, (sub >> 16) & 0xFF,
+                            (sub >> 8)  & 0xFF,  sub & 0xFF)
+                        pairs["Compressor ID"] = codec.trimmingCharacters(in: .whitespaces)
+                    } else if let size = try? await track.load(.naturalSize) {
+                        pairs["Image Width"]  = "\(Int(size.width))"
+                        pairs["Image Height"] = "\(Int(size.height))"
                     }
-                    
-                    pairs["BitDepth"] = "24"
-                    
+                    if let fps = try? await track.load(.nominalFrameRate) {
+                        pairs["Video Frame Rate"] = String(format: "%.3f", fps)
+                    }
+                    if let rate = try? await track.load(.estimatedDataRate), rate > 0 {
+                        pairs["Avg Bitrate"] = String(format: "%.1f Mbps", rate / 1_000_000)
+                    }
+                    pairs["Bit Depth"] = "24"
+
                 case .audio:
                     if let descs = try? await track.load(.formatDescriptions) {
-                        pairs["AudioChannels"] = "\(descs.count)"
+                        pairs["Audio Channels"] = "\(descs.count)"
                         if let first = descs.first {
                             let sub = CMFormatDescriptionGetMediaSubType(first)
                             let codec = String(format: "%c%c%c%c",
-                                               (sub >> 24) & 0xFF, (sub >> 16) & 0xFF,
-                                               (sub >> 8)  & 0xFF,  sub & 0xFF)
-                            pairs["AudioFormat"] = codec.trimmingCharacters(in: .whitespaces)
+                                (sub >> 24) & 0xFF, (sub >> 16) & 0xFF,
+                                (sub >> 8)  & 0xFF,  sub & 0xFF)
+                            pairs["Audio Format"] = codec.trimmingCharacters(in: .whitespaces)
                         }
                     }
-                    
+
                 default:
                     break
                 }
             }
         }
-        
-        // Metadata — all formats
+
+        // Metadata
         if let allMetadata = try? await asset.load(.metadata) {
             for item in allMetadata {
                 guard let key = item.commonKey?.rawValue ?? (item.key as? String) else { continue }
@@ -95,37 +89,37 @@ extension NativeExtractor {
                 let numValue = try? await item.load(.numberValue)
                 let value    = strValue ?? numValue?.stringValue ?? ""
                 guard !value.isEmpty else { continue }
-                
+
                 switch key {
                 case AVMetadataKey.commonKeyMake.rawValue,
-                    "com.apple.quicktime.make":
+                     "com.apple.quicktime.make":
                     pairs["Make"] = value
                     
                 case AVMetadataKey.commonKeyModel.rawValue,
-                    "com.apple.quicktime.model":
-                    pairs["Model"] = value
+                     "com.apple.quicktime.model":
+                    pairs["Camera Model Name"] = value
                     
                 case AVMetadataKey.commonKeySoftware.rawValue,
-                    "com.apple.quicktime.software":
+                     "com.apple.quicktime.software":
                     pairs["Software"] = value
                     
                 case AVMetadataKey.commonKeyCreationDate.rawValue,
-                    "com.apple.quicktime.creationdate":
-                    pairs["CreationDate"] = value
+                     "com.apple.quicktime.creationdate":
+                    pairs["Creation Date"] = value
                     
                 case AVMetadataKey.commonKeyLocation.rawValue,
-                    "com.apple.quicktime.location.ISO6709":
+                     "com.apple.quicktime.location.ISO6709":
                     parseISO6709(value, into: &pairs)
                     
-                // MARK: - Author mapping (mirrors C++ project)
                 case AVMetadataKey.commonKeyAuthor.rawValue,
-                    "com.apple.quicktime.author":
+                     "com.apple.quicktime.author":
                     pairs["Author"] = value
                     
                 case AVMetadataKey.commonKeyArtist.rawValue,
-                    "com.apple.quicktime.artist":
-                    // map artist → Author if no explicit author yet
-                    if pairs["Author"] == nil { pairs["Author"] = value }
+                     "com.apple.quicktime.artist":
+                    if pairs["Author"] == nil {
+                        pairs["Author"] = value
+                    }
                     pairs["Artist"] = value
                     
                 case AVMetadataKey.commonKeyContributor.rawValue:
@@ -135,20 +129,20 @@ extension NativeExtractor {
                     pairs["Publisher"] = value
                     
                 case "com.apple.quicktime.content.identifier":
-                    pairs["ContentIdentifier"] = value
+                    pairs["Content Identifier"] = value
                     
                 case "com.apple.quicktime.live-photo.auto":
-                    pairs["LivePhotoAuto"] = value
+                    pairs["Live Photo Auto"] = value
                     
                 case "com.apple.quicktime.camera.lens_model",
-                    "com.apple.quicktime.camera.lens_model-und-CA":
-                    pairs["CameraLensModel"] = value
+                     "com.apple.quicktime.camera.lens_model-und-CA":
+                    pairs["Camera Lens Model"] = value
                     
                 case "com.apple.quicktime.camera.focal_length.35mm_equivalent":
-                    pairs["CameraFocalLength35mmEquivalent"] = value
+                    pairs["Camera Focal Length 35mm Equivalent"] = value
                     
                 case "com.apple.quicktime.live-photo.vitality-score":
-                    pairs["LivePhotoVitalityScore"] = value
+                    pairs["Live Photo Vitality Score"] = value
                     
                 case AVMetadataKey.commonKeyTitle.rawValue:
                     pairs["Title"] = value
@@ -164,14 +158,14 @@ extension NativeExtractor {
                 }
             }
         }
-        
+
         // Creation date fallback
-        if pairs["CreationDate"] == nil,
+        if pairs["Creation Date"] == nil,
            let metaItem = try? await asset.load(.creationDate),
            let date     = try? await metaItem.load(.dateValue) {
-            pairs["CreationDate"] = ISO8601DateFormatter().string(from: date)
+            pairs["Creation Date"] = ISO8601DateFormatter().string(from: date)
         }
-        
+
         pairs = pairs.compactMapValues { $0 }
         return ExifMetadata(fileURL: url, raw: pairs)
     }
@@ -205,16 +199,16 @@ extension NativeExtractor {
         let latRef = lat >= 0 ? "N" : "S"
         let lonRef = lon >= 0 ? "E" : "W"
 
-        pairs["GPSLatitude"]     = formatGPSDecimal(abs(lat), ref: latRef)
-        pairs["GPSLongitude"]    = formatGPSDecimal(abs(lon), ref: lonRef)
-        pairs["GPSLatitudeRef"]  = latRef
-        pairs["GPSLongitudeRef"] = lonRef
-        pairs["GPSPosition"]     = String(format: "%.6f, %.6f", lat, lon)
+        pairs["GPS Latitude"]      = formatGPSDecimal(abs(lat), ref: latRef)
+        pairs["GPS Longitude"]     = formatGPSDecimal(abs(lon), ref: lonRef)
+        pairs["GPS Latitude Ref"]  = lat >= 0 ? "North" : "South"
+        pairs["GPS Longitude Ref"] = lon >= 0 ? "East" : "West"
+        pairs["GPS Position"]      = String(format: "%.6f, %.6f", lat, lon)
 
         if components.count >= 3 {
             let alt = components[2]
-            pairs["GPSAltitude"]    = String(format: "%.3f m", alt)
-            pairs["GPSAltitudeRef"] = alt >= 0 ? "Above Sea Level" : "Below Sea Level"
+            pairs["GPS Altitude"]     = String(format: "%.3f m", alt)
+            pairs["GPS Altitude Ref"] = alt >= 0 ? "Above Sea Level" : "Below Sea Level"
         }
     }
 
@@ -223,7 +217,6 @@ extension NativeExtractor {
         let minutesDecimal = (decimal - Double(degrees)) * 60
         let minutes        = Int(minutesDecimal)
         let seconds        = (minutesDecimal - Double(minutes)) * 60
-        
         return String(format: "%d deg %d' %.2f\" %@", degrees, minutes, seconds, ref)
     }
 }

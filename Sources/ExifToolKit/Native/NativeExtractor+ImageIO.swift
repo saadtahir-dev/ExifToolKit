@@ -9,6 +9,7 @@
 
 import Foundation
 import ImageIO
+import UniformTypeIdentifiers
 
 extension NativeExtractor {
     func extractImage(from url: URL) throws -> ExifMetadata {
@@ -23,83 +24,87 @@ extension NativeExtractor {
         var pairs: [String: String] = [:]
         
         // File info
-        pairs["FileName"]  = url.lastPathComponent
-        pairs["FileType"]  = url.pathExtension.uppercased()
+        pairs["File Name"]  = url.lastPathComponent
+        pairs["File Type"]  = url.pathExtension.uppercased()
         if let attrs = try? FileManager.default.attributesOfItem(atPath: url.path),
            let size = attrs[.size] as? Int {
-            pairs["FileSize"] = "\(size) bytes"
+            pairs["File Size"] = "\(size) bytes"
+        }
+        if let uti = UTType(filenameExtension: url.pathExtension.lowercased()),
+           let mime = uti.preferredMIMEType {
+            pairs["MIME Type"] = mime
         }
         
         // Top-level image props
         if let width = props[kCGImagePropertyPixelWidth as String] as? Int {
-            pairs["ImageWidth"] = "\(width)"
+            pairs["Image Width"] = "\(width)"
         }
         if let height = props[kCGImagePropertyPixelHeight as String] as? Int {
-            pairs["ImageHeight"] = "\(height)"
+            pairs["Image Height"] = "\(height)"
         }
         if let depth = props[kCGImagePropertyDepth as String] as? Int {
-            pairs["BitDepth"] = "\(depth)"
+            pairs["Bit Depth"] = "\(depth)"
         }
         if let orientation = props[kCGImagePropertyOrientation as String] as? Int {
-            pairs["Orientation"] = "\(orientation)"
+            pairs["Orientation"] = NativeExtractor.orientationMap[orientation] ?? "\(orientation)"
         }
         if let dpi = props[kCGImagePropertyDPIWidth as String] as? Double {
-            pairs["XResolution"] = "\(dpi)"
+            pairs["X Resolution"] = "\(Int(dpi))"
         }
         if let dpi = props[kCGImagePropertyDPIHeight as String] as? Double {
-            pairs["YResolution"] = "\(dpi)"
+            pairs["Y Resolution"] = "\(Int(dpi))"
         }
         if let colorModel = props[kCGImagePropertyColorModel as String] as? String {
-            pairs["ColorSpace"] = colorModel
+            pairs["Color Space"] = colorModel
         }
         if let profile = props[kCGImagePropertyProfileName as String] as? String {
-            pairs["ProfileDescription"] = profile
+            pairs["Profile Description"] = profile
         }
         
         // EXIF
         if let exif = props[kCGImagePropertyExifDictionary as String] as? [String: Any] {
-            pairs["ExifVersion"]        = exif[kCGImagePropertyExifVersion as String] as? String
-            pairs["DateTimeOriginal"]   = exif[kCGImagePropertyExifDateTimeOriginal as String] as? String
-            pairs["CreateDate"]         = exif[kCGImagePropertyExifDateTimeDigitized as String] as? String
-            pairs["ExposureTime"]       = (exif[kCGImagePropertyExifExposureTime as String] as? Double).map { formatExposure($0) }
-            pairs["FNumber"]            = (exif[kCGImagePropertyExifFNumber as String] as? Double).map { String(format: "%.1f", $0) }
-            pairs["ISO"]                = (exif[kCGImagePropertyExifISOSpeedRatings as String] as? [Int])?.first.map { "\($0)" }
-            pairs["ShutterSpeedValue"]  = (exif[kCGImagePropertyExifShutterSpeedValue as String] as? Double).map { String(format: "%.4f", $0) }
-            pairs["ApertureValue"]      = (exif[kCGImagePropertyExifApertureValue as String] as? Double).map { String(format: "%.1f", $0) }
-            pairs["BrightnessValue"]    = (exif[kCGImagePropertyExifBrightnessValue as String] as? Double).map { String(format: "%.6f", $0) }
-            pairs["ExposureCompensation"] = (exif[kCGImagePropertyExifExposureBiasValue as String] as? Double).map { "\($0)" }
-            pairs["MeteringMode"]       = (exif[kCGImagePropertyExifMeteringMode as String] as? Int).map { "\($0)" }
-            pairs["Flash"]              = (exif[kCGImagePropertyExifFlash as String] as? Int).map { "\($0)" }
-            pairs["FocalLength"]        = (exif[kCGImagePropertyExifFocalLength as String] as? Double).map { String(format: "%.1f mm", $0) }
-            pairs["FocalLengthIn35mmFormat"] = (exif[kCGImagePropertyExifFocalLenIn35mmFilm as String] as? Int).map { "\($0) mm" }
-            pairs["ExposureProgram"]    = (exif[kCGImagePropertyExifExposureProgram as String] as? Int).map { "\($0)" }
-            pairs["WhiteBalance"]       = (exif[kCGImagePropertyExifWhiteBalance as String] as? Int).map { "\($0)" }
-            pairs["ExifImageWidth"]     = (exif[kCGImagePropertyExifPixelXDimension as String] as? Int).map { "\($0)" }
-            pairs["ExifImageHeight"]    = (exif[kCGImagePropertyExifPixelYDimension as String] as? Int).map { "\($0)" }
-            pairs["SceneType"]          = (exif[kCGImagePropertyExifSceneType as String] as? Int).map { "\($0)" }
-            pairs["ExposureMode"]       = (exif[kCGImagePropertyExifExposureMode as String] as? Int).map { "\($0)" }
-            pairs["SensingMethod"]      = (exif[kCGImagePropertyExifSensingMethod as String] as? Int).map { "\($0)" }
-            pairs["SubjectArea"]        = (exif[kCGImagePropertyExifSubjectArea as String] as? [Int]).map { $0.map { "\($0)" }.joined(separator: " ") }
-            pairs["OffsetTime"]         = exif[kCGImagePropertyExifOffsetTime as String] as? String
-            pairs["OffsetTimeOriginal"] = exif[kCGImagePropertyExifOffsetTimeOriginal as String] as? String
-            pairs["LensInfo"]           = (exif[kCGImagePropertyExifLensSpecification as String] as? [Double]).map { $0.map { String(format: "%.2f", $0) }.joined(separator: "-") }
-            pairs["LensMake"]           = exif[kCGImagePropertyExifLensMake as String] as? String
-            pairs["LensModel"]          = exif[kCGImagePropertyExifLensModel as String] as? String
-            pairs["SubSecTimeOriginal"] = exif[kCGImagePropertyExifSubsecTimeOriginal as String] as? String
-            pairs["SubSecTimeDigitized"] = exif[kCGImagePropertyExifSubsecTimeDigitized as String] as? String
+            pairs["Exif Version"]                   = exif[kCGImagePropertyExifVersion as String] as? String
+            pairs["Date/Time Original"]             = exif[kCGImagePropertyExifDateTimeOriginal as String] as? String
+            pairs["Create Date"]                    = exif[kCGImagePropertyExifDateTimeDigitized as String] as? String
+            pairs["Exposure Time"]                  = (exif[kCGImagePropertyExifExposureTime as String] as? Double).map { formatExposure($0) }
+            pairs["F Number"]                       = (exif[kCGImagePropertyExifFNumber as String] as? Double).map { String(format: "%.1f", $0) }
+            pairs["ISO"]                            = (exif[kCGImagePropertyExifISOSpeedRatings as String] as? [Int])?.first.map { "\($0)" }
+            pairs["Shutter Speed Value"]            = (exif[kCGImagePropertyExifShutterSpeedValue as String] as? Double).map { String(format: "%.4f", $0) }
+            pairs["Aperture Value"]                 = (exif[kCGImagePropertyExifApertureValue as String] as? Double).map { String(format: "%.1f", $0) }
+            pairs["Brightness Value"]               = (exif[kCGImagePropertyExifBrightnessValue as String] as? Double).map { String(format: "%.6f", $0) }
+            pairs["Exposure Compensation"]          = (exif[kCGImagePropertyExifExposureBiasValue as String] as? Double).map { "\($0)" }
+            pairs["Metering Mode"]                  = (exif[kCGImagePropertyExifMeteringMode as String] as? Int).map { NativeExtractor.meteringModeMap[$0] ?? "\($0)" }
+            pairs["Flash"]                          = (exif[kCGImagePropertyExifFlash as String] as? Int).map { NativeExtractor.flashMap[$0] ?? "\($0)" }
+            pairs["Focal Length"]                   = (exif[kCGImagePropertyExifFocalLength as String] as? Double).map { String(format: "%.1f mm", $0) }
+            pairs["Focal Length In 35mm Format"]    = (exif[kCGImagePropertyExifFocalLenIn35mmFilm as String] as? Int).map { "\($0) mm" }
+            pairs["Exposure Program"]               = (exif[kCGImagePropertyExifExposureProgram as String] as? Int).map { NativeExtractor.exposureProgramMap[$0] ?? "\($0)" }
+            pairs["White Balance"]                  = (exif[kCGImagePropertyExifWhiteBalance as String] as? Int).map { NativeExtractor.whiteBalanceMap[$0] ?? "\($0)" }
+            pairs["Exif Image Width"]               = (exif[kCGImagePropertyExifPixelXDimension as String] as? Int).map { "\($0)" }
+            pairs["Exif Image Height"]              = (exif[kCGImagePropertyExifPixelYDimension as String] as? Int).map { "\($0)" }
+            pairs["Scene Type"]                     = (exif[kCGImagePropertyExifSceneType as String] as? Int).map { NativeExtractor.sceneTypeMap[$0] ?? "\($0)" }
+            pairs["Exposure Mode"]                  = (exif[kCGImagePropertyExifExposureMode as String] as? Int).map { NativeExtractor.exposureModeMap[$0] ?? "\($0)" }
+            pairs["Sensing Method"]                 = (exif[kCGImagePropertyExifSensingMethod as String] as? Int).map { NativeExtractor.sensingMethodMap[$0] ?? "\($0)" }
+            pairs["Subject Area"]                   = (exif[kCGImagePropertyExifSubjectArea as String] as? [Int]).map { $0.map { "\($0)" }.joined(separator: " ") }
+            pairs["Offset Time"]                    = exif[kCGImagePropertyExifOffsetTime as String] as? String
+            pairs["Offset Time Original"]           = exif[kCGImagePropertyExifOffsetTimeOriginal as String] as? String
+            pairs["Lens Info"]                      = (exif[kCGImagePropertyExifLensSpecification as String] as? [Double]).map { $0.map { String(format: "%.2f", $0) }.joined(separator: "-") }
+            pairs["Lens Make"]                      = exif[kCGImagePropertyExifLensMake as String] as? String
+            pairs["Lens Model"]                     = exif[kCGImagePropertyExifLensModel as String] as? String
+            pairs["Sub Sec Time Original"]          = exif[kCGImagePropertyExifSubsecTimeOriginal as String] as? String
+            pairs["Sub Sec Time Digitized"]         = exif[kCGImagePropertyExifSubsecTimeDigitized as String] as? String
         }
         
         // TIFF (Make, Model, Software etc.)
         if let tiff = props[kCGImagePropertyTIFFDictionary as String] as? [String: Any] {
-            pairs["Make"]         = tiff[kCGImagePropertyTIFFMake as String] as? String
-            pairs["Model"]        = tiff[kCGImagePropertyTIFFModel as String] as? String
-            pairs["Software"]     = tiff[kCGImagePropertyTIFFSoftware as String] as? String
-            pairs["ModifyDate"]   = tiff[kCGImagePropertyTIFFDateTime as String] as? String
-            pairs["HostComputer"] = tiff[kCGImagePropertyTIFFHostComputer as String] as? String
-            pairs["ResolutionUnit"] = (tiff[kCGImagePropertyTIFFResolutionUnit as String] as? Int).map { $0 == 2 ? "inches" : "cm" }
-            pairs["XResolution"]  = (tiff[kCGImagePropertyTIFFXResolution as String] as? Double).map { "\(Int($0))" }
-            pairs["YResolution"]  = (tiff[kCGImagePropertyTIFFYResolution as String] as? Double).map { "\(Int($0))" }
-            // Artist maps to Author for consistency with exiftool output
+            pairs["Make"]               = tiff[kCGImagePropertyTIFFMake as String] as? String
+            pairs["Camera Model Name"]  = tiff[kCGImagePropertyTIFFModel as String] as? String
+            pairs["Software"]           = tiff[kCGImagePropertyTIFFSoftware as String] as? String
+            pairs["Modify Date"]        = tiff[kCGImagePropertyTIFFDateTime as String] as? String
+            pairs["Host Computer"]      = tiff[kCGImagePropertyTIFFHostComputer as String] as? String
+            pairs["Resolution Unit"]    = (tiff[kCGImagePropertyTIFFResolutionUnit as String] as? Int).map { $0 == 2 ? "inches" : "cm" }
+            pairs["X Resolution"]       = (tiff[kCGImagePropertyTIFFXResolution as String] as? Double).map { "\(Int($0))" }
+            pairs["Y Resolution"]       = (tiff[kCGImagePropertyTIFFYResolution as String] as? Double).map { "\(Int($0))" }
+            
             if let artist = tiff[kCGImagePropertyTIFFArtist as String] as? String, !artist.isEmpty {
                 pairs["Author"] = artist
                 pairs["Artist"] = artist
@@ -112,40 +117,43 @@ extension NativeExtractor {
             let lonRef = gps[kCGImagePropertyGPSLongitudeRef as String] as? String ?? "E"
             
             if let lat = gps[kCGImagePropertyGPSLatitude as String] as? Double {
-                pairs["GPSLatitude"] = formatGPS(lat, ref: latRef)
+                pairs["GPS Latitude"] = formatGPS(lat, ref: latRef)
             }
+            
             if let lon = gps[kCGImagePropertyGPSLongitude as String] as? Double {
-                pairs["GPSLongitude"] = formatGPS(lon, ref: lonRef)
+                pairs["GPS Longitude"] = formatGPS(lon, ref: lonRef)
             }
+            
             if let alt = gps[kCGImagePropertyGPSAltitude as String] as? Double {
                 let altRef = gps[kCGImagePropertyGPSAltitudeRef as String] as? Int ?? 0
-                pairs["GPSAltitude"] = String(format: "%.1f m %@", alt, altRef == 0 ? "Above Sea Level" : "Below Sea Level")
+                pairs["GPS Altitude"] = String(format: "%.1f m %@", alt, altRef == 0 ? "Above Sea Level" : "Below Sea Level")
             }
-            pairs["GPSLatitudeRef"]  = latRef
-            pairs["GPSLongitudeRef"] = lonRef
-            pairs["GPSTimeStamp"]    = gps[kCGImagePropertyGPSTimeStamp as String] as? String
-            pairs["GPSDateStamp"]    = gps[kCGImagePropertyGPSDateStamp as String] as? String
-            pairs["GPSSpeed"]        = (gps[kCGImagePropertyGPSSpeed as String] as? Double).map { "\($0)" }
-            pairs["GPSSpeedRef"]     = gps[kCGImagePropertyGPSSpeedRef as String] as? String
-            pairs["GPSImgDirection"] = (gps[kCGImagePropertyGPSImgDirection as String] as? Double).map { String(format: "%.6f", $0) }
-            pairs["GPSImgDirectionRef"] = gps[kCGImagePropertyGPSImgDirectionRef as String] as? String
-            pairs["GPSDestBearing"]  = (gps[kCGImagePropertyGPSDestBearing as String] as? Double).map { String(format: "%.6f", $0) }
-            pairs["GPSHPositioningError"] = (gps[kCGImagePropertyGPSHPositioningError as String] as? Double).map { String(format: "%.8f m", $0) }
+            
+            pairs["GPS Latitude Ref"]                   = latRef == "N" ? "North" : "South"
+            pairs["GPS Longitude Ref"]                  = lonRef == "E" ? "East" : "West"
+            pairs["GPS Time Stamp"]                     = gps[kCGImagePropertyGPSTimeStamp as String] as? String
+            pairs["GPS Date Stamp"]                     = gps[kCGImagePropertyGPSDateStamp as String] as? String
+            pairs["GPS Speed"]                          = (gps[kCGImagePropertyGPSSpeed as String] as? Double).map { "\($0)" }
+            pairs["GPS Speed Ref"]                      = (gps[kCGImagePropertyGPSSpeedRef as String] as? String).map { NativeExtractor.gpsSpeedRefMap[$0] ?? $0 }
+            pairs["GPS Img Direction"]                  = (gps[kCGImagePropertyGPSImgDirection as String] as? Double).map { String(format: "%.6f", $0) }
+            pairs["GPS Img Direction Ref"]              = (gps[kCGImagePropertyGPSImgDirectionRef as String] as? String).map { NativeExtractor.gpsDirectionRefMap[$0] ?? $0 }
+            pairs["GPS Dest Bearing"]                   = (gps[kCGImagePropertyGPSDestBearing as String] as? Double).map { String(format: "%.6f", $0) }
+            pairs["GPS Horizontal Positioning Error"]   = (gps[kCGImagePropertyGPSHPositioningError as String] as? Double).map { String(format: "%.8f m", $0) }
             
             if let lat = gps[kCGImagePropertyGPSLatitude as String] as? Double,
                let lon = gps[kCGImagePropertyGPSLongitude as String] as? Double {
                 let latD = latRef == "S" ? -lat : lat
                 let lonD = lonRef == "W" ? -lon : lon
-                pairs["GPSPosition"] = String(format: "%.6f, %.6f", latD, lonD)
+                pairs["GPS Position"] = String(format: "%.6f, %.6f", latD, lonD)
             }
         }
         
         // Apple MakerNote
         if let maker = props[kCGImagePropertyMakerAppleDictionary as String] as? [String: Any] {
-            pairs["ContentIdentifier"]   = maker["17"] as? String
-            pairs["LivePhotoVideoIndex"] = (maker["9"] as? Int).map { "\($0)" }
-            pairs["HDRHeadroom"]         = (maker["33"] as? Double).map { String(format: "%.10f", $0) }
-            pairs["ImageCaptureType"]    = (maker["6"] as? Int).map { "\($0)" }
+            pairs["Content Identifier"]     = maker["17"] as? String
+            pairs["Live Photo Video Index"] = (maker["9"] as? Int).map { "\($0)" }
+            pairs["HDR Headroom"]           = (maker["33"] as? Double).map { String(format: "%.10f", $0) }
+            pairs["Image Capture Type"]     = (maker["6"] as? Int).map { "\($0)" }
         }
         
         // IPTC

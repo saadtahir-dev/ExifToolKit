@@ -330,4 +330,160 @@ extension ExifToolKitTests {
             """)
         }
     }
+    
+    @Test("Compare Image metadata - Native vs ExifTool")
+    func compareIMAGENativeVsExifTool() async throws {
+        let pdfURL = URL(fileURLWithPath: "/Users/saadtahir/Documents/_LAB_Output/xf _2026-06-04T18-25-02/Indexed Sources/00008030-000A6D400EDA802E/Extracted Backup/CameraRollDomain/Media/DCIM/100APPLE/IMG_0003.HEIC")
+        
+        guard FileManager.default.fileExists(atPath: pdfURL.path) else {
+            Issue.record("Image not found at \(pdfURL.path)")
+            return
+        }
+        
+        // Native
+        let nativeMeta = try await NativeExtractor().extract(from: pdfURL)
+        
+        print("\n==================================================")
+        print("NATIVE Image METADATA (\(nativeMeta.raw.count) tags)")
+        print("==================================================")
+        
+        for (key, value) in nativeMeta.raw.sorted(by: { $0.key < $1.key }) {
+            print("\(key): \(value)")
+        }
+        
+        // ExifTool
+        let exifTool = ExifTool(
+            configuration: .init(
+                backend: .exiftoolBinary
+            )
+        )
+        
+        let binaryMeta = try await exifTool.metadata(for: pdfURL)
+        
+        print("\n==================================================")
+        print("EXIFTOOL Image METADATA (\(binaryMeta.raw.count) tags)")
+        print("==================================================")
+        
+        for (key, value) in binaryMeta.raw.sorted(by: { $0.key < $1.key }) {
+            print("\(key): \(value)")
+        }
+        
+        // Diff
+        let nativeKeys = Set(nativeMeta.raw.keys)
+        let binaryKeys = Set(binaryMeta.raw.keys)
+        
+        print("\n==================================================")
+        print("ONLY IN NATIVE")
+        print("==================================================")
+        
+        for key in nativeKeys.subtracting(binaryKeys).sorted() {
+            print("\(key): \(nativeMeta.raw[key] ?? "")")
+        }
+        
+        print("\n==================================================")
+        print("ONLY IN EXIFTOOL")
+        print("==================================================")
+        
+        for key in binaryKeys.subtracting(nativeKeys).sorted() {
+            print("\(key): \(binaryMeta.raw[key] ?? "")")
+        }
+        
+        print("\n==================================================")
+        print("SAME KEYS, DIFFERENT VALUES")
+        print("==================================================")
+        
+        for key in nativeKeys.intersection(binaryKeys).sorted() {
+            guard let native = nativeMeta.raw[key],
+                  let binary = binaryMeta.raw[key],
+                  native != binary
+            else {
+                continue
+            }
+            
+            print("""
+            \(key)
+              Native:   \(native)
+              ExifTool: \(binary)
+            
+            """)
+        }
+    }
+    
+    @Test("Compare AV metadata - Native vs ExifTool")
+    func compareAVNativeVsExifTool() async throws {
+        let pdfURL = URL(fileURLWithPath: "/Users/saadtahir/Documents/_LAB_Output/sd_2026-06-08T11-36-42/Indexed Sources/00008030-000A6D400EDA802E/Extracted Backup/CameraRollDomain/Media/DCIM/100APPLE/IMG_0001.MOV")
+        
+        guard FileManager.default.fileExists(atPath: pdfURL.path) else {
+            Issue.record("AV not found at \(pdfURL.path)")
+            return
+        }
+        
+        // Native
+        let nativeMeta = try await NativeExtractor().extract(from: pdfURL)
+        
+        print("\n==================================================")
+        print("NATIVE AV METADATA (\(nativeMeta.raw.count) tags)")
+        print("==================================================")
+        
+        for (key, value) in nativeMeta.raw.sorted(by: { $0.key < $1.key }) {
+            print("\(key): \(value)")
+        }
+        
+        // ExifTool
+        let exifTool = ExifTool(
+            configuration: .init(
+                backend: .exiftoolBinary
+            )
+        )
+        
+        let binaryMeta = try await exifTool.metadata(for: pdfURL)
+        
+        print("\n==================================================")
+        print("EXIFTOOL AV METADATA (\(binaryMeta.raw.count) tags)")
+        print("==================================================")
+        
+        for (key, value) in binaryMeta.raw.sorted(by: { $0.key < $1.key }) {
+            print("\(key): \(value)")
+        }
+        
+        // Diff
+        let nativeKeys = Set(nativeMeta.raw.keys)
+        let binaryKeys = Set(binaryMeta.raw.keys)
+        
+        print("\n==================================================")
+        print("ONLY IN NATIVE")
+        print("==================================================")
+        
+        for key in nativeKeys.subtracting(binaryKeys).sorted() {
+            print("\(key): \(nativeMeta.raw[key] ?? "")")
+        }
+        
+        print("\n==================================================")
+        print("ONLY IN EXIFTOOL")
+        print("==================================================")
+        
+        for key in binaryKeys.subtracting(nativeKeys).sorted() {
+            print("\(key): \(binaryMeta.raw[key] ?? "")")
+        }
+        
+        print("\n==================================================")
+        print("SAME KEYS, DIFFERENT VALUES")
+        print("==================================================")
+        
+        for key in nativeKeys.intersection(binaryKeys).sorted() {
+            guard let native = nativeMeta.raw[key],
+                  let binary = binaryMeta.raw[key],
+                  native != binary
+            else {
+                continue
+            }
+            
+            print("""
+            \(key)
+              Native:   \(native)
+              ExifTool: \(binary)
+            
+            """)
+        }
+    }
 }
