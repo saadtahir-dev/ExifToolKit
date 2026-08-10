@@ -40,20 +40,32 @@ extension ExifTool {
                     process.standardOutput = stdoutPipe
                     process.standardError = stderrPipe
 
+                    // Drain pipes concurrently while waiting. Waiting first deadlocks when
+                    // exiftool stdout exceeds the OS pipe buffer (e.g. iOS Manifest.plist).
+                    let group = DispatchGroup()
+                    var stdoutData = Data()
+                    var stderrData = Data()
+
+                    group.enter()
+                    DispatchQueue.global(qos: .userInitiated).async {
+                        stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
+                        group.leave()
+                    }
+                    group.enter()
+                    DispatchQueue.global(qos: .userInitiated).async {
+                        stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+                        group.leave()
+                    }
+
                     try process.run()
                     process.waitUntilExit()
+                    group.wait()
 
-                    let stdout = String(
-                        data: stdoutPipe.fileHandleForReading.readDataToEndOfFile(),
-                        encoding: .utf8
-                    ) ?? ""
-                    let stderr = String(
-                        data: stderrPipe.fileHandleForReading.readDataToEndOfFile(),
-                        encoding: .utf8
-                    ) ?? ""
+                    let stdout = String(data: stdoutData, encoding: .utf8) ?? ""
+                    let stderr = String(data: stderrData, encoding: .utf8) ?? ""
 
                     continuation.resume(returning: (stdout, stderr, process.terminationStatus))
-                    
+
                 } catch {
                     continuation.resume(throwing: error)
                 }
